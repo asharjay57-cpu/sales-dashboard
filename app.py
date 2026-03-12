@@ -72,6 +72,59 @@ client = gspread.authorize(creds)
 sheet = client.open_by_url(
     "https://docs.google.com/spreadsheets/d/1_r4JTBlQwLIxes2wcG6z_nYeqhRxN7UwzNo_Xcpndr0/edit"
 ).sheet1
+
+# -------------------------------------------------
+# LOGIN USERS
+# -------------------------------------------------
+
+users = {
+    "director": {"password": "director123", "role": "Director"},
+    "ac": {"password": "ac123", "role": "AC"},
+    "pc": {"password": "pc123", "role": "PC"},
+    "mn": {"password": "mn123", "role": "MN"},
+}
+
+# -------------------------------------------------
+# LOGIN SYSTEM
+# -------------------------------------------------
+
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+if not st.session_state.logged_in:
+
+    st.title("Company Sales Dashboard Login")
+
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+
+    if st.button("Login"):
+
+        if username in users and password == users[username]["password"]:
+
+            st.session_state.logged_in = True
+            st.session_state.role = users[username]["role"]
+            st.success("Login Successful")
+            st.rerun()
+
+        else:
+            st.error("Invalid Username or Password")
+
+    st.stop()
+
+st.sidebar.success(f"Logged in as: {st.session_state.role}")
+
+# -------------------------------------------------
+# ROLE BASED DATA FILTER
+# -------------------------------------------------
+
+role = st.session_state.role
+
+if role != "Director":
+    df = df[df["Sales_Team"] == role]
+
+
+
 # -------------------------------------------------
 # DATA LOADING (CACHED)
 # -------------------------------------------------
@@ -314,3 +367,4 @@ st.download_button(
     "text/csv"
 
 )
+
