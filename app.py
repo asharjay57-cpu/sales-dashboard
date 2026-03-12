@@ -40,7 +40,7 @@ sheet = client.open_by_url(
 users = {
     "director": {"password": "director123", "role": "Director"},
     "ac": {"password": "ac123", "role": "AC"},
-    "ps": {"password": "pc123", "role": "PC"},
+    "ps": {"password": "ps123", "role": "PS"},
     "mn": {"password": "mn123", "role": "MN"},
 }
 
@@ -283,4 +283,5 @@ st.download_button(
     "sales_data.csv",
     "text/csv"
 )
+
 
