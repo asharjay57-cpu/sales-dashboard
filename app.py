@@ -123,7 +123,16 @@ role = st.session_state.role
 if role != "Director":
     df = df[df["Sales_Team"] == role]
 
+# -------------------------------------------------
+# LOGOUT BUTTON
+# -------------------------------------------------
 
+if st.sidebar.button("🚪 Sign Out"):
+    st.session_state.logged_in = False
+    st.session_state.role = None
+    st.rerun()
+
+st.sidebar.header("Dashboard Filters")
 
 # -------------------------------------------------
 # DATA LOADING (CACHED)
@@ -367,4 +376,5 @@ st.download_button(
     "text/csv"
 
 )
+
 
