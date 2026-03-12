@@ -120,7 +120,11 @@ st.sidebar.success(f"Logged in as: {st.session_state.role}")
 
 role = st.session_state.role
 
-if role != "Director":
+# ROLE BASED DATA FILTER
+
+role = st.session_state.get("role")
+
+if role and role != "Director":
     df = df[df["Sales_Team"] == role]
 
 # -------------------------------------------------
@@ -376,5 +380,6 @@ st.download_button(
     "text/csv"
 
 )
+
 
 
