@@ -4,8 +4,6 @@ import plotly.express as px
 import gspread
 from google.oauth2.service_account import Credentials
 
-
-
 # -------------------------------------------------
 # PAGE CONFIG
 # -------------------------------------------------
@@ -15,48 +13,10 @@ st.set_page_config(
     layout="wide"
 )
 
-
-# -------------------------------------------------
-# FONT STYLE
-# -------------------------------------------------
-
-st.markdown("""
-<style>
-
-html, body, [class*="css"]  {
-    font-size: 18px;
-}
-
-h1 {
-    font-size: 42px !important;
-    font-weight: 700 !important;
-}
-
-h2 {
-    font-size: 30px !important;
-    font-weight: 600 !important;
-}
-
-[data-testid="metric-container"] {
-    font-size: 22px;
-    font-weight: bold;
-}
-
-</style>
-""", unsafe_allow_html=True)
-
-# -------------------------------------------------
-# AUTO REFRESH (60 sec)
-# -------------------------------------------------
-# Refresh Button
-if st.button("🔄 Refresh Data"):
-    st.cache_data.clear()
-    st.rerun()
-
-st.markdown("---")
 # -------------------------------------------------
 # GOOGLE SHEETS CONNECTION
 # -------------------------------------------------
+
 scope = [
     "https://spreadsheets.google.com/feeds",
     "https://www.googleapis.com/auth/drive"
@@ -104,7 +64,6 @@ if not st.session_state.logged_in:
 
             st.session_state.logged_in = True
             st.session_state.role = users[username]["role"]
-            st.success("Login Successful")
             st.rerun()
 
         else:
@@ -112,49 +71,57 @@ if not st.session_state.logged_in:
 
     st.stop()
 
+# -------------------------------------------------
+# SIDEBAR USER INFO
+# -------------------------------------------------
+
 st.sidebar.success(f"Logged in as: {st.session_state.role}")
-
-
-
-# -------------------------------------------------
-# LOGOUT BUTTON
-# -------------------------------------------------
 
 if st.sidebar.button("🚪 Sign Out"):
     st.session_state.logged_in = False
     st.session_state.role = None
     st.rerun()
 
-st.sidebar.header("Dashboard Filters")
-
 # -------------------------------------------------
-# DATA LOADING (CACHED)
+# DATA LOADING
 # -------------------------------------------------
 
 @st.cache_data
 def load_data():
+
     data = sheet.get_all_records()
     df = pd.DataFrame(data)
-    df["Date"] = pd.to_datetime(df["Date"])
+
+    if not df.empty:
+        df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
+
     return df
+
 
 df = load_data()
 
 # -------------------------------------------------
-# ROLE BASED DATA FILTER
+# ROLE BASED FILTER
 # -------------------------------------------------
 
 role = st.session_state.get("role")
 
 if role and role != "Director":
     df = df[df["Sales_Team"] == role]
+
+# -------------------------------------------------
+# HANDLE EMPTY DATA
+# -------------------------------------------------
+
+if df.empty:
+    st.warning("No data available for this user.")
+    st.stop()
+
 # -------------------------------------------------
 # SIDEBAR FILTERS
 # -------------------------------------------------
 
 st.sidebar.header("Dashboard Filters")
-
-# SAFE DATE RANGE
 
 min_date = df["Date"].min()
 max_date = df["Date"].max()
@@ -205,25 +172,16 @@ filtered_df = df[
 st.title("Directors Sales Dashboard")
 st.caption("Textile Dispatch & Sales Performance Overview")
 
-st.markdown("---")
-
 # -------------------------------------------------
 # KPI CALCULATIONS
 # -------------------------------------------------
 
 current_dispatch = filtered_df["Dispatch_Meters"].sum()
 
-prev_df = df[df["Date"] < filtered_df["Date"].min()]
-previous_dispatch = prev_df["Dispatch_Meters"].sum()
-
-delta_dispatch = current_dispatch - previous_dispatch
-
 total_orders = filtered_df["GUI"].nunique()
 total_customers = filtered_df["Customer_Name"].nunique()
 
-avg_order = 0
-if total_orders > 0:
-    avg_order = current_dispatch / total_orders
+avg_order = current_dispatch / total_orders if total_orders > 0 else 0
 
 # -------------------------------------------------
 # KPI CARDS
@@ -231,31 +189,15 @@ if total_orders > 0:
 
 col1, col2, col3, col4 = st.columns(4)
 
-col1.metric(
-    "Total Dispatch",
-    f"{current_dispatch:,.0f}",
-    f"{delta_dispatch:,.0f}"
-)
-
-col2.metric(
-    "Total Orders",
-    f"{total_orders:,}"
-)
-
-col3.metric(
-    "Customers",
-    f"{total_customers:,}"
-)
-
-col4.metric(
-    "Avg Order Size",
-    f"{avg_order:,.0f}"
-)
+col1.metric("Total Dispatch", f"{current_dispatch:,.0f}")
+col2.metric("Total Orders", f"{total_orders}")
+col3.metric("Customers", f"{total_customers}")
+col4.metric("Avg Order Size", f"{avg_order:,.0f}")
 
 st.markdown("---")
 
 # -------------------------------------------------
-# DATE GRANULARITY
+# DISPATCH TREND
 # -------------------------------------------------
 
 granularity = st.selectbox(
@@ -271,26 +213,17 @@ if granularity == "Weekly":
 elif granularity == "Monthly":
     trend_df["Date"] = trend_df["Date"].dt.to_period("M").apply(lambda r: r.start_time)
 
-dispatch_trend = (
-    trend_df.groupby("Date")["Dispatch_Meters"]
-    .sum()
-    .reset_index()
-)
+dispatch_trend = trend_df.groupby("Date")["Dispatch_Meters"].sum().reset_index()
 
 fig1 = px.line(
     dispatch_trend,
     x="Date",
     y="Dispatch_Meters",
     markers=True,
-    text="Dispatch_Meters",
     title="Dispatch Trend"
 )
 
-fig1.update_traces(textposition="top center")
-
 st.plotly_chart(fig1, use_container_width=True)
-
-st.markdown("---")
 
 # -------------------------------------------------
 # TOP CUSTOMERS
@@ -310,38 +243,10 @@ fig = px.bar(
     top_customers,
     x="Customer_Name",
     y="Dispatch_Meters",
-    text="Dispatch_Meters",
-    title="Top 5 Customers by Dispatch"
+    text="Dispatch_Meters"
 )
-
-fig.update_traces(texttemplate='%{text:,}', textposition="outside")
 
 st.plotly_chart(fig, use_container_width=True)
-# -------------------------------------------------
-# TOP SORT PERFORMANCE
-# -------------------------------------------------
-
-st.subheader("Top 10 Performing Sort Nos")
-
-sort_sales = (
-    filtered_df.groupby("Sort_Number")["Dispatch_Meters"]
-    .sum()
-    .sort_values(ascending=False)
-    .head(10)
-    .reset_index()
-)
-
-fig_sort = px.bar(
-    sort_sales,
-    x="Sort_Number",
-    y="Dispatch_Meters",
-    text="Dispatch_Meters",
-    title="Top 10 Sort Nos by Dispatch"
-)
-
-fig_sort.update_traces(texttemplate='%{text:,}', textposition="outside")
-
-st.plotly_chart(fig_sort, use_container_width=True)
 
 # -------------------------------------------------
 # CITY PERFORMANCE
@@ -361,21 +266,14 @@ fig_city = px.bar(
     x="Dispatch_Meters",
     y="City",
     orientation="h",
-    text="Dispatch_Meters",
-    title="Dispatch by City"
+    text="Dispatch_Meters"
 )
-
-fig_city.update_traces(texttemplate='%{text:,}', textposition="outside")
 
 st.plotly_chart(fig_city, use_container_width=True)
 
 # -------------------------------------------------
 # EXPORT DATA
 # -------------------------------------------------
-
-st.markdown("---")
-
-st.subheader("Export Data")
 
 csv = filtered_df.to_csv(index=False).encode("utf-8")
 
@@ -384,10 +282,4 @@ st.download_button(
     csv,
     "sales_data.csv",
     "text/csv"
-
 )
-
-
-
-
-
