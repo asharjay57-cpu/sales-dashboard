@@ -154,9 +154,18 @@ if role and role != "Director":
 
 st.sidebar.header("Dashboard Filters")
 
+# SAFE DATE RANGE
+
+min_date = df["Date"].min()
+max_date = df["Date"].max()
+
+if pd.isna(min_date) or pd.isna(max_date):
+    min_date = pd.Timestamp.today()
+    max_date = pd.Timestamp.today()
+
 date_range = st.sidebar.date_input(
     "Date Range",
-    [df["Date"].min(), df["Date"].max()]
+    [min_date, max_date]
 )
 
 customers = st.sidebar.multiselect(
@@ -377,6 +386,7 @@ st.download_button(
     "text/csv"
 
 )
+
 
 
 
