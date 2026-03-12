@@ -57,24 +57,21 @@ st.markdown("---")
 # -------------------------------------------------
 # GOOGLE SHEETS CONNECTION
 # -------------------------------------------------
-
 scope = [
     "https://spreadsheets.google.com/feeds",
     "https://www.googleapis.com/auth/drive"
 ]
 
-creds = Credentials.from_service_account_file(
-    "axial-sunup-489510-s3-e19c2ef29fc4.json",
+creds = Credentials.from_service_account_info(
+    st.secrets["gcp_service_account"],
     scopes=scope
 )
 
 client = gspread.authorize(creds)
 
 sheet = client.open_by_url(
-    "https://docs.google.com/spreadsheets/d/1_r4JTBlQwLIxes2wcG6z_nYeqhRxN7UwzNo_Xcpndr0/edit?usp=sharing"
+    "https://docs.google.com/spreadsheets/d/1_r4JTBlQwLIxes2wcG6z_nYeqhRxN7UwzNo_Xcpndr0/edit"
 ).sheet1
-
-
 # -------------------------------------------------
 # DATA LOADING (CACHED)
 # -------------------------------------------------
@@ -315,4 +312,5 @@ st.download_button(
     csv,
     "sales_data.csv",
     "text/csv"
+
 )
