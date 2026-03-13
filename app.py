@@ -278,7 +278,7 @@ st.plotly_chart(fig_city, use_container_width=True)
 # -------------------------------------------------
 # AI SALES ASSISTANT
 # -------------------------------------------------
-
+st.info("🤖 Ask the AI assistant for insights from the dashboard data.")
 st.markdown("---")
 st.subheader("🤖 Sales AI Assistant")
 st.subheader("🤖 Sales AI Assistant")
@@ -371,6 +371,7 @@ st.download_button(
     "sales_data.csv",
     "text/csv"
 )
+
 
 
 
