@@ -278,86 +278,74 @@ st.plotly_chart(fig_city, use_container_width=True)
 # -------------------------------------------------
 # AI SALES ASSISTANT
 # -------------------------------------------------
-st.info("🤖 Ask the AI assistant for insights from the dashboard data.")
 st.markdown("---")
-st.subheader("🤖 Sales AI Assistant")
+# --------- CHART 1 ----------
+st.subheader("📊 Dispatch Trend")
+st.line_chart(dispatch_trend)
 
-st.markdown("""
-Ask questions like:
+# --------- CHART 2 ----------
+st.subheader("🌍 Sales by City")
+st.bar_chart(city_sales)
 
-• What insights can you give?
-• Which customer is driving our sales?
-• Which city is performing best?
-• Are there any sales risks?
-""")
+# --------- CHART 3 ----------
+st.subheader("🏆 Top Customers")
+st.dataframe(top_customers)
 
-question = st.text_input("Ask about sales insights")
+# -----------------------------
+# AI ASSISTANT SECTION
+# -----------------------------
 
-if question:
+st.markdown("---")
 
-    q = question.lower()
+ai_toggle = st.toggle("🤖 Enable Sales AI Assistant", value=True)
 
-    if "insight" in q or "summary" in q:
+if ai_toggle:
 
-        top_customer = top_customers.iloc[0]["Customer_Name"]
-        top_city = city_sales.iloc[0]["City"]
+    st.subheader("🤖 Sales AI Assistant")
 
-        st.success(f"""
-📊 **Key Sales Insights**
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
 
-• **{top_customer}** is currently the biggest customer contributing to dispatch volume.
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.write(message["content"])
 
-• **{top_city}** is the strongest performing city.
+    prompt = st.chat_input("Ask about sales insights...")
 
-• Total dispatch in the selected period is **{current_dispatch:,.0f} meters**.
+    if prompt:
 
-💡 This indicates strong demand from key customers and cities.
-""")
+        st.session_state.messages.append({"role": "user", "content": prompt})
 
-    elif "customer" in q:
+        with st.chat_message("user"):
+            st.write(prompt)
 
-        top_customer = top_customers.iloc[0]["Customer_Name"]
+        q = prompt.lower()
 
-        st.success(f"""
-🏆 **Customer Insight**
+        if "insight" in q or "summary" in q:
+            response = f"""
+📊 Key Sales Insights
 
-**{top_customer}** is currently the top contributing customer.
+• Top customer: {top_customers.iloc[0]["Customer_Name"]}  
+• Best city: {city_sales.iloc[0]["City"]}  
+• Total dispatch: {current_dispatch:,.0f} meters
+"""
 
-You may consider:
-• strengthening relationship
-• offering priority service
-• monitoring repeat orders
-""")
+        elif "customer" in q:
+            response = f"🏆 Our top customer is {top_customers.iloc[0]['Customer_Name']}"
 
-    elif "city" in q:
+        elif "city" in q:
+            response = f"🌍 The best performing city is {city_sales.iloc[0]['City']}"
 
-        best_city = city_sales.iloc[0]["City"]
+        elif "order" in q:
+            response = f"🧾 Total orders placed: {total_orders}"
 
-        st.success(f"""
-🌍 **City Insight**
+        else:
+            response = "🤖 I can help with insights about customers, cities, dispatch, and orders."
 
-**{best_city}** is the highest performing city.
+        with st.chat_message("assistant"):
+            st.write(response)
 
-This could indicate:
-• strong distributor network
-• higher fabric demand
-""")
-
-    elif "risk" in q:
-
-        st.warning("""
-⚠️ **Sales Risk Insight**
-
-If dispatch volume is highly dependent on a few customers or cities, the company may face risk if those customers reduce orders.
-
-Diversifying customers can improve stability.
-""")
-
-    else:
-
-        st.info("🤖 Try asking for sales insights, customer performance, or city performance.")
-
-
+        st.session_state.messages.append({"role": "assistant", "content": response})
 # -------------------------------------------------
 # EXPORT DATA
 # -------------------------------------------------
@@ -370,6 +358,7 @@ st.download_button(
     "sales_data.csv",
     "text/csv"
 )
+
 
 
 
