@@ -188,13 +188,7 @@ avg_order = current_dispatch / total_orders if total_orders > 0 else 0
 # KPI CARDS
 # -------------------------------------------------
 
-st.subheader("📌 Quick Summary")
 
-summary1, summary2, summary3 = st.columns(3)
-
-summary1.metric("📦 Dispatch Today", f"{current_dispatch:,.0f}")
-summary2.metric("🧾 Orders", total_orders)
-summary3.metric("🏢 Customers", total_customers)
 
 col1, col2, col3, col4 = st.columns(4)
 
@@ -293,6 +287,7 @@ st.download_button(
     "text/csv"
 )
 st.button("📧 Send Report by Email")
+
 
 
 
