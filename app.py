@@ -71,11 +71,11 @@ def kpi_card(label, value, sub, color):
         <div class="kpi-sub">{sub}</div>
     </div>"""
 
-def dark_chart(fig, height=300):
+def dark_chart(fig, height=400):
     fig.update_layout(
         paper_bgcolor='#1e2130', plot_bgcolor='#1e2130',
         font=dict(color='#8b93b8', family='DM Sans, Segoe UI, sans-serif', size=11),
-        height=height, margin=dict(l=10, r=10, t=36, b=10),
+        height=height, margin=dict(l=10, r=10, t=40, b=10),
         legend=dict(bgcolor='rgba(0,0,0,0)', font=dict(color='#8b93b8', size=10)),
         colorway=PAL, title_font=dict(color='#e8eaf6', size=13),
     )
@@ -217,7 +217,7 @@ filtered_df = df[
 ]
 
 # ════════════════════════════════════════
-# PAGE HEADER  ← filtered_df is ready now
+# PAGE HEADER
 # ════════════════════════════════════════
 st.markdown(f"""
 <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:20px;">
@@ -256,109 +256,80 @@ with col4:
 st.markdown("<br>", unsafe_allow_html=True)
 
 # ════════════════════════════════════════
-# ROW 2: Dispatch Trend + Fabric Donut
+# CHART 1 — Dispatch Trend (full width)
 # ════════════════════════════════════════
-left_col, right_col = st.columns([2, 1])
+st.markdown('<div class="chart-card">', unsafe_allow_html=True)
 
-with left_col:
-    st.markdown('<div class="chart-card">', unsafe_allow_html=True)
+granularity = st.selectbox("Time View", ["Daily", "Weekly", "Monthly"])
 
-    granularity = st.selectbox("Time View", ["Daily", "Weekly", "Monthly"])
+trend_df = filtered_df.copy()
+if granularity == "Weekly":
+    trend_df["Date"] = trend_df["Date"].dt.to_period("W").apply(lambda r: r.start_time)
+elif granularity == "Monthly":
+    trend_df["Date"] = trend_df["Date"].dt.to_period("M").apply(lambda r: r.start_time)
 
-    trend_df = filtered_df.copy()
-    if granularity == "Weekly":
-        trend_df["Date"] = trend_df["Date"].dt.to_period("W").apply(lambda r: r.start_time)
-    elif granularity == "Monthly":
-        trend_df["Date"] = trend_df["Date"].dt.to_period("M").apply(lambda r: r.start_time)
+dispatch_trend = trend_df.groupby("Date")["Dispatch_Meters"].sum().reset_index()
 
-    dispatch_trend = trend_df.groupby("Date")["Dispatch_Meters"].sum().reset_index()
-
-    fig1 = go.Figure()
-    fig1.add_trace(go.Bar(
-        x=dispatch_trend["Date"], y=dispatch_trend["Dispatch_Meters"],
-        name="Dispatch Meters", marker_color='rgba(79,142,247,0.7)',
-        marker_line_color='#4f8ef7', marker_line_width=1,
-    ))
-    fig1.add_trace(go.Scatter(
-        x=dispatch_trend["Date"], y=dispatch_trend["Dispatch_Meters"],
-        name="Trend Line", line=dict(color='#3ecf8e', width=2),
-        mode='lines+markers', marker=dict(size=4),
-    ))
-    fig1.update_layout(title="Dispatch Trend")
-    dark_chart(fig1, height=300)
-    st.plotly_chart(fig1, use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-with right_col:
-    st.markdown('<div class="chart-card">', unsafe_allow_html=True)
-    if "Fabric_Type" in filtered_df.columns:
-        fab = (filtered_df.groupby("Fabric_Type")["Dispatch_Meters"]
-               .sum().reset_index().sort_values("Dispatch_Meters", ascending=False))
-        fig_fab = px.pie(fab, values="Dispatch_Meters", names="Fabric_Type",
-                         hole=0.62, title="Meters by Fabric Type",
-                         color_discrete_sequence=PAL)
-        fig_fab.update_traces(textinfo='percent',
-                              hovertemplate='<b>%{label}</b><br>%{value:,.0f} m<extra></extra>')
-        fig_fab.update_layout(legend=dict(orientation='h', y=-0.15, font=dict(color='#8b93b8', size=10)))
-        dark_chart(fig_fab, height=300)
-        st.plotly_chart(fig_fab, use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+fig1 = go.Figure()
+fig1.add_trace(go.Bar(
+    x=dispatch_trend["Date"], y=dispatch_trend["Dispatch_Meters"],
+    name="Dispatch Meters", marker_color='rgba(79,142,247,0.7)',
+    marker_line_color='#4f8ef7', marker_line_width=1,
+))
+fig1.add_trace(go.Scatter(
+    x=dispatch_trend["Date"], y=dispatch_trend["Dispatch_Meters"],
+    name="Trend Line", line=dict(color='#3ecf8e', width=2),
+    mode='lines+markers', marker=dict(size=4),
+))
+fig1.update_layout(title="Dispatch Trend")
+dark_chart(fig1, height=400)
+st.plotly_chart(fig1, use_container_width=True)
+st.markdown('</div>', unsafe_allow_html=True)
 
 # ════════════════════════════════════════
-# ROW 3: Top Customers | City | Sales Team
+# CHART 2 — Top 5 Customers (full width)
 # ════════════════════════════════════════
-c1, c2, c3 = st.columns(3)
+st.markdown('<div class="chart-card">', unsafe_allow_html=True)
 
-with c1:
-    st.markdown('<div class="chart-card">', unsafe_allow_html=True)
-    top_customers = (filtered_df.groupby("Customer_Name")["Dispatch_Meters"]
-                     .sum().sort_values(ascending=False).head(5).reset_index())
-    fig_cust = px.bar(
-        top_customers, x="Customer_Name", y="Dispatch_Meters",
-        title="Top 5 Customers",
-        text=top_customers["Dispatch_Meters"].apply(lambda x: f"{x:,.0f}"),
-        color="Customer_Name", color_discrete_sequence=PAL
-    )
-    fig_cust.update_traces(textposition='outside', textfont=dict(color='#8b93b8', size=10))
-    fig_cust.update_layout(showlegend=False)
-    dark_chart(fig_cust, height=290)
-    st.plotly_chart(fig_cust, use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-with c2:
-    st.markdown('<div class="chart-card">', unsafe_allow_html=True)
-    city_sales = (filtered_df.groupby("City")["Dispatch_Meters"]
-                  .sum().sort_values(ascending=False).reset_index())
-    fig_city = px.bar(
-        city_sales, x="Dispatch_Meters", y="City",
-        orientation="h", title="City Performance",
-        text=city_sales["Dispatch_Meters"].apply(lambda x: f"{x:,.0f}"),
-        color="City", color_discrete_sequence=PAL
-    )
-    fig_city.update_traces(textposition='outside', textfont=dict(color='#8b93b8', size=10))
-    fig_city.update_layout(showlegend=False)
-    dark_chart(fig_city, height=290)
-    st.plotly_chart(fig_city, use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-with c3:
-    st.markdown('<div class="chart-card">', unsafe_allow_html=True)
-    team_data = (filtered_df.groupby("Sales_Team")["Dispatch_Meters"]
-                 .sum().sort_values(ascending=False).reset_index())
-    fig_team = px.bar(
-        team_data, x="Sales_Team", y="Dispatch_Meters",
-        title="Sales Team Performance",
-        color="Sales_Team", color_discrete_sequence=PAL,
-        text=team_data["Dispatch_Meters"].apply(lambda x: f"{x:,.0f}")
-    )
-    fig_team.update_traces(textposition='outside', textfont=dict(color='#8b93b8', size=10))
-    fig_team.update_layout(showlegend=False)
-    dark_chart(fig_team, height=290)
-    st.plotly_chart(fig_team, use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+top_customers = (
+    filtered_df.groupby("Customer_Name")["Dispatch_Meters"]
+    .sum().sort_values(ascending=False).head(5).reset_index()
+)
+fig_cust = px.bar(
+    top_customers, x="Customer_Name", y="Dispatch_Meters",
+    title="Top 5 Customers",
+    text=top_customers["Dispatch_Meters"].apply(lambda x: f"{x:,.0f}"),
+    color="Customer_Name", color_discrete_sequence=PAL
+)
+fig_cust.update_traces(textposition='outside', textfont=dict(color='#8b93b8', size=10))
+fig_cust.update_layout(showlegend=False)
+dark_chart(fig_cust, height=400)
+st.plotly_chart(fig_cust, use_container_width=True)
+st.markdown('</div>', unsafe_allow_html=True)
 
 # ════════════════════════════════════════
-# TOP CUSTOMERS TABLE
+# CHART 3 — City Performance (full width)
+# ════════════════════════════════════════
+st.markdown('<div class="chart-card">', unsafe_allow_html=True)
+
+city_sales = (
+    filtered_df.groupby("City")["Dispatch_Meters"]
+    .sum().sort_values(ascending=False).reset_index()
+)
+fig_city = px.bar(
+    city_sales, x="Dispatch_Meters", y="City",
+    orientation="h", title="City Performance",
+    text=city_sales["Dispatch_Meters"].apply(lambda x: f"{x:,.0f}"),
+    color="City", color_discrete_sequence=PAL
+)
+fig_city.update_traces(textposition='outside', textfont=dict(color='#8b93b8', size=10))
+fig_city.update_layout(showlegend=False)
+dark_chart(fig_city, height=400)
+st.plotly_chart(fig_city, use_container_width=True)
+st.markdown('</div>', unsafe_allow_html=True)
+
+# ════════════════════════════════════════
+# TABLE — Top Customers Detail
 # ════════════════════════════════════════
 st.markdown("<hr style='border-color:#2e3250;margin:8px 0 20px;'>", unsafe_allow_html=True)
 st.markdown("### 🏆 Top Customers — Detail")
