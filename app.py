@@ -157,13 +157,34 @@ sales_team = st.sidebar.multiselect(
 # FILTER DATA
 # -------------------------------------------------
 
-filtered_df = df[
-    (df["Customer_Name"].isin(customers)) &
-    (df["Sort_Number"].isin(sort_no)) &
-    (df["Sales_Team"].isin(sales_team)) &
-    (df["Date"] >= pd.to_datetime(date_range[0])) &
-    (df["Date"] <= pd.to_datetime(date_range[1]))
-]
+with st.sidebar.form("filters"):
+
+    st.sidebar.header("🔎 Dashboard Filters")
+
+    date_range = st.date_input(
+        "Date Range",
+        [min_date, max_date]
+    )
+
+    customers = st.multiselect(
+        "Customer",
+        df["Customer_Name"].unique(),
+        default=df["Customer_Name"].unique()
+    )
+
+    sort_no = st.multiselect(
+        "Sort No",
+        df["Sort_Number"].unique(),
+        default=df["Sort_Number"].unique()
+    )
+
+    sales_team = st.multiselect(
+        "Sales Team",
+        df["Sales_Team"].unique(),
+        default=df["Sales_Team"].unique()
+    )
+
+    apply_filters = st.form_submit_button("Apply Filters")
 
 # -------------------------------------------------
 # DASHBOARD TITLE
@@ -186,6 +207,14 @@ avg_order = current_dispatch / total_orders if total_orders > 0 else 0
 # -------------------------------------------------
 # KPI CARDS
 # -------------------------------------------------
+
+st.subheader("📌 Quick Summary")
+
+summary1, summary2, summary3 = st.columns(3)
+
+summary1.metric("📦 Dispatch Today", f"{current_dispatch:,.0f}")
+summary2.metric("🧾 Orders", total_orders)
+summary3.metric("🏢 Customers", total_customers)
 
 col1, col2, col3, col4 = st.columns(4)
 
@@ -283,5 +312,6 @@ st.download_button(
     "sales_data.csv",
     "text/csv"
 )
+st.button("📧 Send Report by Email")
 
 
