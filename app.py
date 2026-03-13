@@ -274,78 +274,6 @@ fig_city = px.bar(
 
 st.plotly_chart(fig_city, use_container_width=True)
 
-
-# -------------------------------------------------
-# AI SALES ASSISTANT
-# -------------------------------------------------
-st.markdown("---")
-# --------- CHART 1 ----------
-st.subheader("📊 Dispatch Trend")
-st.line_chart(dispatch_trend)
-
-# --------- CHART 2 ----------
-st.subheader("🌍 Sales by City")
-st.bar_chart(city_sales)
-
-# --------- CHART 3 ----------
-st.subheader("🏆 Top Customers")
-st.dataframe(top_customers)
-
-# -----------------------------
-# AI ASSISTANT SECTION
-# -----------------------------
-
-st.markdown("---")
-
-ai_toggle = st.toggle("🤖 Enable Sales AI Assistant", value=True)
-
-if ai_toggle:
-
-    st.subheader("🤖 Sales AI Assistant")
-
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
-
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.write(message["content"])
-
-    prompt = st.chat_input("Ask about sales insights...")
-
-    if prompt:
-
-        st.session_state.messages.append({"role": "user", "content": prompt})
-
-        with st.chat_message("user"):
-            st.write(prompt)
-
-        q = prompt.lower()
-
-        if "insight" in q or "summary" in q:
-            response = f"""
-📊 Key Sales Insights
-
-• Top customer: {top_customers.iloc[0]["Customer_Name"]}  
-• Best city: {city_sales.iloc[0]["City"]}  
-• Total dispatch: {current_dispatch:,.0f} meters
-"""
-
-        elif "customer" in q:
-            response = f"🏆 Our top customer is {top_customers.iloc[0]['Customer_Name']}"
-
-        elif "city" in q:
-            response = f"🌍 The best performing city is {city_sales.iloc[0]['City']}"
-
-        elif "order" in q:
-            response = f"🧾 Total orders placed: {total_orders}"
-
-        else:
-            response = "🤖 I can help with insights about customers, cities, dispatch, and orders."
-
-        with st.chat_message("assistant"):
-            st.write(response)
-
-        st.session_state.messages.append({"role": "assistant", "content": response})
 # -------------------------------------------------
 # EXPORT DATA
 # -------------------------------------------------
@@ -358,6 +286,7 @@ st.download_button(
     "sales_data.csv",
     "text/csv"
 )
+
 
 
 
