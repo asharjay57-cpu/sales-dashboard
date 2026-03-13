@@ -15,10 +15,9 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# ╔══════════════════════════════════════════╗
-# ║  ★ PASTE 1 — DARK THEME CSS             ║
-# ║  Put this right after set_page_config() ║
-# ╚══════════════════════════════════════════╝
+# ════════════════════════════════════════
+# DARK THEME CSS
+# ════════════════════════════════════════
 st.markdown("""
 <style>
     .stApp { background-color: #111318; }
@@ -60,10 +59,9 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# ╔══════════════════════════════════════════╗
-# ║  ★ PASTE 2 — HELPER FUNCTIONS           ║
-# ║  Put this right after the CSS block     ║
-# ╚══════════════════════════════════════════╝
+# ════════════════════════════════════════
+# HELPER FUNCTIONS
+# ════════════════════════════════════════
 PAL = ['#4f8ef7','#00c7b1','#f7a84f','#a259f7','#e05c8a','#3ecf8e','#f06070','#ffcc44','#56cfff','#b07cff']
 
 def kpi_card(label, value, sub, color):
@@ -85,25 +83,142 @@ def dark_chart(fig, height=300):
     fig.update_yaxes(gridcolor='rgba(46,50,80,0.6)', linecolor='#2e3250', tickfont=dict(color='#555d85'))
     return fig
 
+# ════════════════════════════════════════
+# GOOGLE SHEETS CONNECTION  — unchanged
+# ════════════════════════════════════════
+scope = [
+    "https://spreadsheets.google.com/feeds",
+    "https://www.googleapis.com/auth/drive"
+]
+
+creds = Credentials.from_service_account_info(
+    st.secrets["gcp_service_account"],
+    scopes=scope
+)
+
+client = gspread.authorize(creds)
+
+sheet = client.open_by_url(
+    "https://docs.google.com/spreadsheets/d/1_r4JTBlQwLIxes2wcG6z_nYeqhRxN7UwzNo_Xcpndr0/edit"
+).sheet1
 
 # ════════════════════════════════════════
-# YOUR EXISTING CODE GOES HERE (unchanged)
-# — Google Sheets connection
-# — Login users dict
-# — Login logic
-# — Sidebar sign out
-# — load_data()
-# — Role based filter
-# — Empty data check
-# — Sidebar filters
-# — filtered_df
+# LOGIN USERS  — unchanged
 # ════════════════════════════════════════
+users = {
+    "director": {"password": "director123", "role": "Director"},
+    "ac":       {"password": "ac123",        "role": "AC"},
+    "ps":       {"password": "ps123",        "role": "PS"},
+    "mn":       {"password": "mn123",        "role": "MN"},
+}
 
+# ════════════════════════════════════════
+# LOGIN SYSTEM  — unchanged
+# ════════════════════════════════════════
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
 
-# ╔══════════════════════════════════════════╗
-# ║  ★ PASTE 3 — PAGE HEADER               ║
-# ║  Replace your st.title() + st.caption() ║
-# ╚══════════════════════════════════════════╝
+if not st.session_state.logged_in:
+
+    st.title("Company Sales Dashboard Login")
+
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+
+    if st.button("Login"):
+        if username in users and password == users[username]["password"]:
+            st.session_state.logged_in = True
+            st.session_state.role = users[username]["role"]
+            st.rerun()
+        else:
+            st.error("Invalid Username or Password")
+
+    st.stop()
+
+# ════════════════════════════════════════
+# SIDEBAR USER INFO  — unchanged
+# ════════════════════════════════════════
+st.sidebar.success(f"Logged in as: {st.session_state.role}")
+
+if st.sidebar.button("🚪 Sign Out"):
+    st.session_state.logged_in = False
+    st.session_state.role = None
+    st.rerun()
+
+# ════════════════════════════════════════
+# DATA LOADING  — unchanged
+# ════════════════════════════════════════
+@st.cache_data
+def load_data():
+    data = sheet.get_all_records()
+    df = pd.DataFrame(data)
+    if not df.empty:
+        df["Date"] = pd.to_datetime(df["Date"], errors="coerce")
+    return df
+
+df = load_data()
+
+# ════════════════════════════════════════
+# ROLE BASED FILTER  — unchanged
+# ════════════════════════════════════════
+role = st.session_state.get("role")
+
+if role and role != "Director":
+    df = df[df["Sales_Team"] == role]
+
+# ════════════════════════════════════════
+# HANDLE EMPTY DATA  — unchanged
+# ════════════════════════════════════════
+if df.empty:
+    st.warning("No data available for this user.")
+    st.stop()
+
+# ════════════════════════════════════════
+# SIDEBAR FILTERS  — unchanged
+# ════════════════════════════════════════
+st.sidebar.header("Dashboard Filters")
+
+min_date = df["Date"].min()
+max_date = df["Date"].max()
+
+if pd.isna(min_date) or pd.isna(max_date):
+    min_date = pd.Timestamp.today()
+    max_date = pd.Timestamp.today()
+
+date_range = st.sidebar.date_input("Date Range", [min_date, max_date])
+
+customers = st.sidebar.multiselect(
+    "Customer",
+    df["Customer_Name"].unique(),
+    default=df["Customer_Name"].unique()
+)
+
+sort_no = st.sidebar.multiselect(
+    "Sort No",
+    df["Sort_Number"].unique(),
+    default=df["Sort_Number"].unique()
+)
+
+sales_team = st.sidebar.multiselect(
+    "Sales Team",
+    df["Sales_Team"].unique(),
+    default=df["Sales_Team"].unique()
+)
+
+# ════════════════════════════════════════
+# FILTER DATA  — unchanged
+# ════════════════════════════════════════
+filtered_df = df[
+    (df["Customer_Name"].isin(customers)) &
+    (df["Sort_Number"].isin(sort_no)) &
+    (df["Sales_Team"].isin(sales_team)) &
+    (df["Date"] >= pd.to_datetime(date_range[0])) &
+    (df["Date"] <= pd.to_datetime(date_range[1]))
+]
+
+# ════════════════════════════════════════
+# PAGE HEADER  ← filtered_df is ready now
+# ════════════════════════════════════════
 st.markdown(f"""
 <div style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:20px;">
     <div>
@@ -117,18 +232,17 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
+# ════════════════════════════════════════
+# KPI CALCULATIONS  — unchanged
+# ════════════════════════════════════════
+current_dispatch = filtered_df["Dispatch_Meters"].sum()
+total_orders     = filtered_df["GUI"].nunique()
+total_customers  = filtered_df["Customer_Name"].nunique()
+avg_order        = current_dispatch / total_orders if total_orders > 0 else 0
 
-# ╔══════════════════════════════════════════╗
-# ║  ★ PASTE 4 — KPI CARDS                 ║
-# ║  Replace your col1.metric() lines       ║
-# ╚══════════════════════════════════════════╝
-
-# Keep your original KPI calculations unchanged:
-# current_dispatch = filtered_df["Dispatch_Meters"].sum()
-# total_orders     = filtered_df["GUI"].nunique()
-# total_customers  = filtered_df["Customer_Name"].nunique()
-# avg_order        = current_dispatch / total_orders if total_orders > 0 else 0
-
+# ════════════════════════════════════════
+# KPI CARDS
+# ════════════════════════════════════════
 col1, col2, col3, col4 = st.columns(4)
 with col1:
     st.markdown(kpi_card("Total Dispatch", f"{current_dispatch:,.0f}", "Total meters dispatched", "blue"), unsafe_allow_html=True)
@@ -141,14 +255,9 @@ with col4:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-
-# ╔══════════════════════════════════════════╗
-# ║  ★ PASTE 5 — CHARTS                    ║
-# ║  Replace everything from your           ║
-# ║  granularity selectbox to the end       ║
-# ╚══════════════════════════════════════════╝
-
-# ── ROW 2: Dispatch Trend + Fabric Donut ──
+# ════════════════════════════════════════
+# ROW 2: Dispatch Trend + Fabric Donut
+# ════════════════════════════════════════
 left_col, right_col = st.columns([2, 1])
 
 with left_col:
@@ -195,7 +304,9 @@ with right_col:
         st.plotly_chart(fig_fab, use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ── ROW 3: Top Customers | City | Sales Team ──
+# ════════════════════════════════════════
+# ROW 3: Top Customers | City | Sales Team
+# ════════════════════════════════════════
 c1, c2, c3 = st.columns(3)
 
 with c1:
@@ -246,7 +357,9 @@ with c3:
     st.plotly_chart(fig_team, use_container_width=True)
     st.markdown('</div>', unsafe_allow_html=True)
 
-# ── TOP CUSTOMERS TABLE ──
+# ════════════════════════════════════════
+# TOP CUSTOMERS TABLE
+# ════════════════════════════════════════
 st.markdown("<hr style='border-color:#2e3250;margin:8px 0 20px;'>", unsafe_allow_html=True)
 st.markdown("### 🏆 Top Customers — Detail")
 
@@ -265,7 +378,14 @@ cust_tbl["Dispatch_Meters"] = cust_tbl["Dispatch_Meters"].apply(lambda x: f"{x:,
 cust_tbl.columns = ["Customer", "City", "Team", "Meters Dispatched", "Orders"]
 st.dataframe(cust_tbl, use_container_width=True, height=340)
 
-# ── EXPORT — your original download button, unchanged ──
+# ════════════════════════════════════════
+# EXPORT DATA  — unchanged
+# ════════════════════════════════════════
 st.markdown("<br>", unsafe_allow_html=True)
 csv = filtered_df.to_csv(index=False).encode("utf-8")
-st.download_button("⬇️ Download Filtered Data", csv, "sales_data.csv", "text/csv")
+st.download_button(
+    "⬇️ Download Filtered Data",
+    csv,
+    "sales_data.csv",
+    "text/csv"
+)
