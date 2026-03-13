@@ -157,6 +157,14 @@ sales_team = st.sidebar.multiselect(
 # FILTER DATA
 # -------------------------------------------------
 
+filtered_df = df[
+    (df["Customer_Name"].isin(customers)) &
+    (df["Sort_Number"].isin(sort_no)) &
+    (df["Sales_Team"].isin(sales_team)) &
+    (df["Date"] >= pd.to_datetime(date_range[0])) &
+    (df["Date"] <= pd.to_datetime(date_range[1]))
+]
+
 with st.sidebar.form("filters"):
 
     st.sidebar.header("🔎 Dashboard Filters")
@@ -313,5 +321,6 @@ st.download_button(
     "text/csv"
 )
 st.button("📧 Send Report by Email")
+
 
 
