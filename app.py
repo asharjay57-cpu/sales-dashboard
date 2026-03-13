@@ -172,6 +172,10 @@ filtered_df = df[
 
 st.title("Directors Sales Dashboard")
 st.caption("Textile Dispatch & Sales Performance Overview")
+# Refresh Button
+if st.button("🔄 Refresh Data"):
+    st.cache_data.clear()
+    st.rerun()
 
 # -------------------------------------------------
 # KPI CALCULATIONS
@@ -286,6 +290,7 @@ st.download_button(
     "sales_data.csv",
     "text/csv"
 )
+
 
 
 
