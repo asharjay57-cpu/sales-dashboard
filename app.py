@@ -274,6 +274,91 @@ fig_city = px.bar(
 
 st.plotly_chart(fig_city, use_container_width=True)
 
+
+# -------------------------------------------------
+# AI SALES ASSISTANT
+# -------------------------------------------------
+
+st.markdown("---")
+st.subheader("🤖 Sales AI Assistant")
+st.subheader("🤖 Sales AI Assistant")
+
+st.markdown("""
+Ask questions like:
+
+• What insights can you give?
+• Which customer is driving our sales?
+• Which city is performing best?
+• Are there any sales risks?
+""")
+
+question = st.text_input("Ask about sales insights")
+
+if question:
+
+    q = question.lower()
+
+    if "insight" in q or "summary" in q:
+
+        top_customer = top_customers.iloc[0]["Customer_Name"]
+        top_city = city_sales.iloc[0]["City"]
+
+        st.success(f"""
+📊 **Key Sales Insights**
+
+• **{top_customer}** is currently the biggest customer contributing to dispatch volume.
+
+• **{top_city}** is the strongest performing city.
+
+• Total dispatch in the selected period is **{current_dispatch:,.0f} meters**.
+
+💡 This indicates strong demand from key customers and cities.
+""")
+
+    elif "customer" in q:
+
+        top_customer = top_customers.iloc[0]["Customer_Name"]
+
+        st.success(f"""
+🏆 **Customer Insight**
+
+**{top_customer}** is currently the top contributing customer.
+
+You may consider:
+• strengthening relationship
+• offering priority service
+• monitoring repeat orders
+""")
+
+    elif "city" in q:
+
+        best_city = city_sales.iloc[0]["City"]
+
+        st.success(f"""
+🌍 **City Insight**
+
+**{best_city}** is the highest performing city.
+
+This could indicate:
+• strong distributor network
+• higher fabric demand
+""")
+
+    elif "risk" in q:
+
+        st.warning("""
+⚠️ **Sales Risk Insight**
+
+If dispatch volume is highly dependent on a few customers or cities, the company may face risk if those customers reduce orders.
+
+Diversifying customers can improve stability.
+""")
+
+    else:
+
+        st.info("🤖 Try asking for sales insights, customer performance, or city performance.")
+
+
 # -------------------------------------------------
 # EXPORT DATA
 # -------------------------------------------------
@@ -286,6 +371,7 @@ st.download_button(
     "sales_data.csv",
     "text/csv"
 )
+
 
 
 
