@@ -286,7 +286,8 @@ st.download_button(
     "sales_data.csv",
     "text/csv"
 )
-st.button("📧 Send Report by Email")
+
+
 
 
 
